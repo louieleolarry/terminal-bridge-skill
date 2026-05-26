@@ -1,0 +1,15 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+
+# Runtime state from a bridge installation should not be committed here.
+queue/
+results/
+logs/
+*.result.json
+*.approve
+
+# Local editor and environment files.
+.env
+.vscode/
+.idea/
