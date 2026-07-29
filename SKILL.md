@@ -109,6 +109,29 @@ The allowlist file (`allowlist.json`) supports JSONC comments and the
 courier reloads it on every command — edits take effect immediately, no
 restart.
 
+## Codex Sandbox Fallback
+
+Use Terminal Bridge when Codex's shell cannot reach the real host
+environment, even though the user's Mac can. Common signals include:
+
+- `ssh: connect ... Operation not permitted`
+- `Could not resolve host`
+- Files or repos visible on the Mac but missing from the sandbox mount.
+- Commands that must run from the user's real `~/Sites` checkout.
+
+Treat the bridge result as host-shell evidence, and treat the sandbox error as
+sandbox evidence. Do not infer that the remote host, repo, DNS, or SSH config is
+broken until the same check has been run through the bridge or the user's real
+terminal.
+
+Recommended flow:
+
+1. Run the cheap sandbox check first when useful.
+2. If it fails with a sandbox-denial or sandbox-network symptom, retry the same
+   narrow command through Terminal Bridge.
+3. Compare the two results explicitly in the final answer.
+4. Keep all bridge commands allowlisted and ask before widening the allowlist.
+
 ## Failure handling
 
 Decision tree when something goes wrong:
