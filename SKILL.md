@@ -124,7 +124,8 @@ this public skill repository.
 
 The installed `horus-loopback-tunnel` rule invokes a fixed, owner-protected
 `horus_tunnel.py` validator through `/usr/bin/python3 -I`, accepting exactly one
-ASCII decimal port in 1024–65535. It builds fixed SSH argv and uses `execve`,
+ASCII decimal port in 1024–65535 that must also match the owner-protected
+`horus-callback-port` file. It builds fixed SSH argv and uses `execve`,
 so SSH remains the courier's direct child for timeout cleanup. Invoke the
 installed capability as:
 
@@ -144,8 +145,10 @@ connection multiplexing. Allow only a Mac loopback listener forwarded to
 Horus loopback on the same unprivileged port, with an exact host/account.
 Do not allow remote commands, reverse or dynamic forwards, public listeners,
 extra options, arbitrary hosts, wildcard rules or trust-on-first-use.
-The port range allows access to loopback TCP services, not inherently just OAuth.
-Verify each actual callback and keep every invocation within the owner's task.
+The numeric range is only syntax validation. The protected local port file,
+server `PermitOpen`, and public-key `permitopen` must all pin the same verified
+active callback. Update those exact pins together when a fresh login chooses a
+new port; do not substitute a wildcard or a broad port range.
 
 Use the bridge's bounded timeout. A tunnel remains running during login:
 queue acceptance is not successful authentication, and a live listener alone
@@ -156,12 +159,26 @@ do not queue unrelated work behind a login tunnel.
 
 The courier does not provide an interactive terminal or password prompt.
 Never place passwords, private keys, OAuth codes or tokens in argv, stdin,
-environment overrides, queue files or logs. The installed validator uses a clean environment and default native SSH key
-locations; it does not inherit an agent socket or askpass settings. Existing key
-use still requires applicable policy approval; do not read or export key material. If authentication fails, report that separately from an
+environment overrides, queue files or logs. The installed validator uses a clean
+environment and an explicitly selected dedicated native SSH identity with
+`IdentitiesOnly=yes` and `IdentityAgent=none`; it does not inherit an agent socket
+or askpass settings. Native key use requires applicable policy approval; do not
+read or export private key material. An owner-approved unencrypted key remains
+owner-only in SSH's native store, with any exception to other credential-storage
+conventions recorded in the task approval. If authentication fails, report that separately from an
 allowlist denial; adding a rule cannot fix missing server authorization.
 New key enrollment or broader server access requires its own explicit approval
 and applicable policy review.
+
+The separately approved server account is non-admin and tunnel-only. Require a
+locked password, nologin shell, root-controlled public-key path, exact source
+restriction, `AllowTcpForwarding local`, exact `PermitOpen`, `MaxSessions 0`,
+`ForceCommand /usr/bin/false`, and disabled Unix-socket, tunnel-device, agent,
+X11 and PTY access. Key-level forwarding restrictions alone do not exclude
+reverse forwarding. Validate SSH syntax and compare existing users' effective
+configuration before a reload. After successful key authentication, test that
+shell, subsystem, reverse forwarding and other destinations are denied; failed
+authentication alone does not prove these restrictions.
 
 Explicit owner approval to add this scoped rule satisfies the skill's ask-first
 requirement for that change; do not repeatedly ask for the same approval.
