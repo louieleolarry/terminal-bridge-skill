@@ -9,11 +9,14 @@ A file-based courier that lets Claude execute commands on Louie Larry's real Mac
 shell from the sandbox. Claude writes a JSON command file into `queue/`; a
 Python LaunchAgent (`com.terminalbridge.courier`) on the Mac watches that
 directory, executes against `allowlist.json`, and writes the result into
-`results/`. No network, no remote shell — just a shared folder.
+`results/`. The courier transport is a shared folder. Commands may use the
+network only when an owner-approved, narrowly scoped local rule permits it.
 
 Built and verified end-to-end on **2026-05-09**. This skill documents the
 contract; the implementation lives at
 `/Users/louieleolarry/Sites/Claude/Projects/terminal-bridge/`.
+Other fleet machines may use `~/Sites/terminal-bridge/`. Discover the installed
+entrypoint and inspect its actual allowlist; do not create a duplicate installation.
 
 ## When to reach for the bridge
 
@@ -83,8 +86,9 @@ default). Re-run with a narrower scope or ask the user to bump the cap.
 
 ## What the default allowlist permits
 
-Read this as a ceiling, not a floor — anything outside it returns `denied`
-and pops a macOS notification banner.
+The list below describes the historical default, not every deployed machine.
+The installed `allowlist.json` is authoritative; some fleet machines have only
+a few exact rules. Inspect it before claiming a command is supported.
 
 - **Read-only inspection:** `ls`, `cat`, `head`, `tail`, `pwd`, `echo`,
   `date`, `which`, `file`, `stat`, `wc`, `grep`, `find`, `tree`, `diff`,
@@ -108,6 +112,63 @@ and pops a macOS notification banner.
 The allowlist file (`allowlist.json`) supports JSONC comments and the
 courier reloads it on every command — edits take effect immediately, no
 restart.
+
+
+## Owner-approved Horus SSH tunnel capability
+
+The owner authorized a permanent, narrowly scoped Horus tunnel rule on
+2026-11-16. This is local command permission, not a new server credential or
+blanket SSH authorization. Inspect the deployed rule for the exact hostname,
+account, public host-key file and argv; keep machine-specific values out of
+this public skill repository.
+
+The installed `horus-loopback-tunnel` rule invokes a fixed, owner-protected
+`horus_tunnel.py` validator through `/usr/bin/python3 -I`, accepting exactly one
+ASCII decimal port in 1024–65535. It builds fixed SSH argv and uses `execve`,
+so SSH remains the courier's direct child for timeout cleanup. Invoke the
+installed capability as:
+
+```sh
+python3 "<bridge>/bridge.py" --json --timeout 300 --wait-timeout 310 -- \
+  /usr/bin/python3 -I "<bridge>/horus_tunnel.py" <verified-callback-port>
+```
+
+Use the timeout appropriate to the authorized session; this example is not an
+instruction to retry or extend an expired session automatically.
+
+The validator must require the native SSH binary, an empty SSH configuration
+(`-F /dev/null`), forwarding-only/noninteractive mode (`-N -T`,
+`BatchMode=yes`), strict host-key checking against an independently verified
+pin, `GlobalKnownHostsFile=/dev/null`, `UpdateHostKeys=no`, forwarding-failure detection, disabled agent/X11 forwarding and disabled
+connection multiplexing. Allow only a Mac loopback listener forwarded to
+Horus loopback on the same unprivileged port, with an exact host/account.
+Do not allow remote commands, reverse or dynamic forwards, public listeners,
+extra options, arbitrary hosts, wildcard rules or trust-on-first-use.
+The port range allows access to loopback TCP services, not inherently just OAuth.
+Verify each actual callback and keep every invocation within the owner's task.
+
+Use the bridge's bounded timeout. A tunnel remains running during login:
+queue acceptance is not successful authentication, and a live listener alone
+does not prove the remote callback is reachable. Verify both ends before
+owner consent and verify closure after completion or timeout. Do not detach
+SSH to evade the courier's timeout. Long-running commands occupy the courier;
+do not queue unrelated work behind a login tunnel.
+
+The courier does not provide an interactive terminal or password prompt.
+Never place passwords, private keys, OAuth codes or tokens in argv, stdin,
+environment overrides, queue files or logs. The installed validator uses a clean environment and default native SSH key
+locations; it does not inherit an agent socket or askpass settings. Existing key
+use still requires applicable policy approval; do not read or export key material. If authentication fails, report that separately from an
+allowlist denial; adding a rule cannot fix missing server authorization.
+New key enrollment or broader server access requires its own explicit approval
+and applicable policy review.
+
+Explicit owner approval to add this scoped rule satisfies the skill's ask-first
+requirement for that change; do not repeatedly ask for the same approval.
+Preserve unrelated rules, back up before editing, and test positive and
+negative matcher cases. Do not change the courier lifecycle or weaken another
+tool's safety restrictions. This capability does not authorize bypassing a
+blocked Terminal UI, copying sessions, or extracting secrets.
 
 ## Failure handling
 
